@@ -110,7 +110,7 @@
                 startTime:new Date().getTime(),
                 startX:0,
                 dataBufferSize:1000,
-                scrollUpdateInterval:10,
+                scrollUpdateInterval:50,
             });
 
             style_settings = fillParamDefaults(style_settings, {
@@ -251,7 +251,7 @@
     var j = new Jogger();
     j.canvasElement.style.background="linear-gradient(to left, blue, red)";
     document.getElementById("main").appendChild(j.containerElement);
-    setInterval(()=>{j.pushDatum(0, j.scrolledX - 0.05, Math.random());}, 20);
+    setInterval(()=>{j.pushDatum(0, j.scrolledX - 0.05, Math.random());}, 50);
 
 
 </script>
