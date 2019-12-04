@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mosey JS test</title>
+</head>
+<body>
+
+<div id="main" style="padding: 50px;">
+    <div id="my-canvas-test">
+        
+    </div>
+</div>
+
+<script type="text/javascript">
+    function init() {
+        var mdiv = document.getElementById("my-canvas-test");
+        var canv = document.createElement("canvas");
+        canv.id="can0";
+        canv.width=600;
+        canv.style.backgroundColor="grey";
+        mdiv.style.width="200px";
+        mdiv.style.overflow="hidden";
+        mdiv.appendChild(canv);
+        var ctx = canv.getContext("2d");
+        canv.onmousedown=e=>{ctx.beginPath();ctx.moveTo(e.clientX-canv.offsetLeft,e.clientY-canv.offsetTop); mdiv.style.overflow="";};
+        canv.onmousemove=e=>{
+            if ( document.querySelector('#can0:active') ) {
+                ctx.lineTo(e.clientX-canv.offsetLeft,e.clientY-canv.offsetTop);ctx.stroke();
+            }
+        };
+        canv.onmouseup=e=>{mdiv.style.overflow="hidden";};
+        canv.onmouseleave=e=>{mdiv.style.overflow="hidden";};
+    }
+
+    window.addEventListener('load', init);
+</script>
+
+
+</body>
+</html>
