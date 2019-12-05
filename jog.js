@@ -49,6 +49,9 @@
 
      SERIES - settings that vary within a Jogger object on a series by series basis.
 
+     Note: it was found that playground 13b - bezier curves without rounding or offscreen rendering -
+     are by far most performant.
+
 */
 class Jogger {
 
@@ -95,7 +98,7 @@ class Jogger {
             startTime:new Date().getTime(),
             startX:0,
             dataBufferSize:1000,
-            scrollUpdateInterval:10,
+            scrollUpdateInterval:50,
         });
 
         style_settings = fillParamDefaults(style_settings, {
@@ -155,7 +158,10 @@ class Jogger {
         this.containerElement.style.margin = style_settings.margin;
 
         this.series = series;
-        if (! this.series[0].context) {this.series[0].context = this.canvasElement.getContext("2d"); this.series[0].context.lineWidth=this.series[0].lineThickness;}
+        if (! this.series[0].context) {
+            this.series[0].context = this.canvasElement.getContext("2d"); 
+            this.series[0].context.lineWidth=this.series[0].lineThickness;
+        }
 
         this.canvasElement.onmousedown=e=>{this.canvasElement.style.outline="3px solid green"; this.canvasElement.style.outlineOffset="-3px";};
         this.canvasElement.onmousemove=e=>{
@@ -192,9 +198,11 @@ class Jogger {
         let lastMove = this.series[series].lastMove; 
         let cLastMove = [lastMove[0] * wNow, (1-lastMove[1]) * hNow];
         ctx.moveTo(cLastMove[0], cLastMove[1]);
-        var cX = normX * this.containerElement.offsetWidth;
-        var cY = (1 - normY) * this.containerElement.offsetHeight;
-        ctx.lineTo(cX , cY);
+        var cX = normX * wNow;
+        var cY = (1 - normY) * hNow;
+        let midpointX = ((lastMove[0] + normX)/2)*wNow;
+        let controlPoints = [ [midpointX, lastMove[1]*hNow], [midpointX, cY] ];
+        ctx.bezierCurveTo(controlPoints[0][0], controlPoints[0][1], controlPoints[1][0], controlPoints[1][1], cX , cY);
         ctx.stroke();
         this.series[series].lastMove = [normX, normY];
     }
@@ -228,7 +236,6 @@ class Jogger {
     redrawCanvas() {
 
     }
-
 
 
 } // end of class Jogger
