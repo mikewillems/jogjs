@@ -4,16 +4,7 @@ class Jogger {
                 control_settings, 
                 style_settings, 
                 document_settings,
-                series=[{
-                    name:"", 
-                    yScale:[0,1], 
-                    lineColor:"rgba(0,0,0,1)", 
-                    lineThickness:"2px", 
-                    lineStyle: "solid", 
-                    dataBuffer: [[0, 
-                    new Date().getTime(), 0]], 
-                    lastMove:[0,0],
-                }],
+                series=[],
             ){
 
 
@@ -47,44 +38,34 @@ class Jogger {
         });
 
         style_settings = fillParamDefaults(style_settings, {
-            backgroundColor:"rgba(0,0,0,0)", 
+            backgroundColor:"white",
+            canvasBackground:"linear-gradient(to left, blue, red)", 
             margin:"0px",
         });
 
         document_settings = fillParamDefaults(document_settings, {
-            containerId:"jog-" + new Date().getTime().toString(), 
-            canvasId:"jog-canvas-" + new Date().getTime().toString(), 
+            containerId:"jog-" + new Date().getTime().toString(),  
             resizeDetectInterval:100,
         });
 
-        if(series == undefined) {
-            series = [{},];
-        }
-
-        series[0] = fillParamDefaults(series[0], {
-            name:"", 
-            yScale:[0,1],
-            lineColor:"rgba(0,0,0,1)", 
-            lineThickness:"2px", 
-            lineStyle: "solid", 
-            dataBuffer: [[0, control_settings.startTime, 0]], 
-            lastMove:[0,0],
-        });
+        
 
         // DOCUMENT
         this.containerElement = document.createElement("div");
-        this.canvasElement = document.createElement("canvas");
-        this.containerElement.appendChild(this.canvasElement);
-        this.containerElement.style.overflow = "hidden";
+        this.intermediateElement = document.createElement("div");
+        this.containerElement.appendChild(this.intermediateElement);
+
+        this.containerElement.style.position = "relative";
+        this.intermediateElement.style.overflow = "hidden";
+        this.intermediateElement.style.position = "relative";
+
         this.containerElement.id = document_settings.containerId;
-        this.canvasElement.id = document_settings.canvasId;
         this.containerElement.style.width = dimension_settings.startWidth.toString() + "px";
         this.containerElement.style.height = dimension_settings.startHeight.toString() + "px";
-        this.canvasElement.width = dimension_settings.startWidth;
-        this.canvasElement.style.width = dimension_settings.startWidth.toString() + "px";
-        this.canvasElement.height = dimension_settings.startHeight;
-        this.canvasElement.style.height = dimension_settings.startHeight.toString() + "px";
-        this.canvasElement.style.marginLeft="0px";
+        this.intermediateElement.style.width = this.containerElement.style.width;
+        this.intermediateElement.style.height = this.containerElement.style.height;
+
+        this.canvasBackground = style_settings.canvasBackground;
 
         // SCALE
         this.xScale = dimension_settings.xScale;
@@ -103,29 +84,16 @@ class Jogger {
         this.mostRecentlyRenderedDatumX = 0;
 
         // STYLE
-        this.canvasElement.style.backgroundColor = style_settings.backgroundColor;
+        this.containerElement.style.backgroundColor = style_settings.backgroundColor;
         this.containerElement.style.margin = style_settings.margin;
 
         // SERIES
-        this.series = series;
-        if (! this.series[0].context) {
-            this.series[0].context = this.canvasElement.getContext("2d"); 
-            this.series[0].context.lineWidth=this.series[0].lineThickness;
-        }
-
-        // ENABLE DRAGGING
-        this.canvasElement.onmousedown=e=>{this.canvasElement.style.outline="3px solid green"; this.canvasElement.style.outlineOffset="-3px";};
-        this.canvasElement.onmousemove=e=>{
-            if ( document.querySelector('#'+this.canvasElement.id+':active') ) {
-                this.canvasElement.style.marginLeft = (parseInt(this.canvasElement.style.marginLeft.split('px')[0]) + e.movementX) + "px";
-            }
-        };
-        this.canvasElement.onmouseup=e=>{this.canvasElement.style.outline="none";};
+        this.series=series;
 
         // ENABLE SCROLLING
         this.scrollTimer = setInterval(()=>{
             this.scrolledX += this.scrollRate * this.scrollUpdateInterval / 1000 / this.xScale;
-            if(!document.querySelector('#'+this.canvasElement.id+':active')) {
+            if(!document.querySelector('#'+this.series[this.series.length-1].canvasElement.id+':active')) {
                 this.scrollForwardTo(this.scrolledX);
             }
         }, this.scrollUpdateInterval);
@@ -138,8 +106,6 @@ class Jogger {
         var cX = normX * this.containerElement.offsetWidth;
         var cY = (1 - normY) * this.containerElement.offsetHeight;
         ctx.moveTo(cX, cY);
-        // console.log("ctx.moveTo(",cX,",",cY,")");
-        // console.log("storing as lastMove: (",normX,",",normY,")");
         this.series[series].lastMove = [normX, normY];
     }
 
@@ -161,13 +127,19 @@ class Jogger {
 
     // scroll such that right edge of the viewing window is normX viewing window widths from the start.
     scrollForwardTo(normX) {
-        this.canvasElement.style.marginLeft = (1-normX) * this.canvasElement.offsetWidth.toString() + "px";
+        let newMargin = (1-normX) * this.series[0].canvasElement.offsetWidth.toString() + "px";
+        for(let i in this.series) {
+            this.series[i].canvasElement.style.left = newMargin;
+        }
     }
 
 
     // scroll such that left edge of the viewing window is normX viewing window widths from the start.
     scrollBackwardTo(normX) {
-        this.canvasElement.style.marginLeft = -1 * normX * this.canvasElement.offsetWidth.toString() + "px";
+        let newMargin = -1 * normX * this.series[0].canvasElement.offsetWidth.toString() + "px";
+        for(let i in this.series) {
+            series[i].canvasElement.style.left = newMargin;
+        }
     }
 
     // TODO - this doesn't take into account yScale(s)
@@ -179,6 +151,68 @@ class Jogger {
             this.drawLineTo(series, x - this.startX, y);
             this.mostRecentlyRenderedDatumX = x;
         }
+    }
+
+    addSeries({name="",lineColor="rgb(0,0,0)",lineThickness="2px",yScale=[0,1]}={}) {
+        this.series.push({"name":name,"yScale":yScale, "dataBuffer": [[this.startX, 0]], 
+            "lastMove":[this.startX,0],});
+        let newSeries = this.series[this.series.length-1];
+
+        newSeries.canvasElement = document.createElement("canvas");
+        newSeries.canvasElement.style.position = "absolute";
+        this.intermediateElement.appendChild(newSeries.canvasElement); 
+        newSeries.context = newSeries.canvasElement.getContext("2d");
+        setTimeout(()=>{newSeries.context.strokeStyle=lineColor; newSeries.context.lineWidth=lineThickness;}, 50);
+        newSeries.canvasElement.background = "transparent";
+        newSeries.canvasElement.id="jog-canvas-" + new Date().getTime().toString();
+
+        if (this.scrolledX > 1) {
+            newSeries.canvasElement.width = this.containerElement.offsetWidth * this.scrolledX;
+        } else {
+            newSeries.canvasElement.width = this.containerElement.offsetWidth;
+        }
+
+        newSeries.canvasElement.style.width = newSeries.canvasElement.width + "px";
+        newSeries.canvasElement.height = this.containerElement.offsetHeight;
+        newSeries.canvasElement.style.height = newSeries.canvasElement.height + "px";
+        newSeries.canvasElement.style.left=this.scrolledX*this.containerElement.offsetHeight+"px";
+
+        // Enable dragging on the most recent canvas only:
+
+        let current = this.series.length-1;
+
+        for (let i = 0; i < current; i++) {
+            this.series[i].canvasElement.onmousedown = null;
+            this.series[i].canvasElement.onmouseup = null;
+            this.series[i].canvasElement.onmousemove = null;
+        }
+
+        newSeries.canvasElement.onmousedown=e=>{
+            newSeries.canvasElement.style.outline="3px solid green"; 
+            newSeries.canvasElement.style.outlineOffset="-3px";
+        };
+        
+        newSeries.canvasElement.onmouseup=e=>{newSeries.canvasElement.style.outline="none";};
+
+        newSeries.canvasElement.onmousemove=e=>{
+            if ( document.querySelector('#'+newSeries.canvasElement.id+':active') ) {
+                let left = (parseInt(newSeries.canvasElement.style.left.split('px')[0]) + e.movementX) + "px";
+                for(let i in this.series) {
+                    this.series[i].canvasElement.style.left = left;
+                }
+            }
+        };
+
+        // apply background only to bottom canvas:
+        if(current == 0) {
+            newSeries.canvasElement.style.background = this.canvasBackground;
+        }
+
+        return newSeries; // returns the new series object
+    }
+
+    setSeriesLineDash(series, fillLength, totalLength) {
+        this.series[series].context.setLineDash([fillLength, totalLength]);
     }
 
     refreshData(series, x, y) {

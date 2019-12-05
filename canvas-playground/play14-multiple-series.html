@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jog JS multi-series demo</title>
+    <script type="text/javascript" src="../jog.js"></script>
+</head>
+<body>
+
+<div id="main" style="padding: 50px;"></div>
+
+<script type="text/javascript">
+
+    var j = new Jogger();
+    document.getElementById("main").appendChild(j.containerElement);
+    j.addSeries({name:"zero", lineColor:"rgb(256,256,256)", lineThickness:"2px"});
+    j.addSeries();
+    j.addSeries({});
+
+    setInterval(()=>{j.pushDatum(0, j.scrolledX - 0.05, Math.random()); j.pushDatum(1, j.scrolledX - 0.05, Math.random()); j.pushDatum(2, j.scrolledX - 0.05, Math.random());}, 500);
+    j.setSeriesLineDash(0,2,5);
+
+</script>
+
+
+</body>
+</html>
