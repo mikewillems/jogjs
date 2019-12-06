@@ -153,7 +153,7 @@ class Jogger {
         }
     }
 
-    addSeries({name="",lineColor="rgb(0,0,0)",lineThickness="2px",yScale=[0,1]}={}) {
+    addSeries({name="",lineColor="rgb(0,0,0)",lineThickness=2,yScale=[0,1]}={}) {
         this.series.push({"name":name,"yScale":yScale, "dataBuffer": [[this.startX, 0]], 
             "lastMove":[this.startX,0],});
         let newSeries = this.series[this.series.length-1];
