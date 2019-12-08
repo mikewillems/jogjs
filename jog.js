@@ -1,54 +1,40 @@
 class Jogger {
 
-    constructor(dimension_settings, 
-                control_settings, 
-                style_settings, 
-                document_settings,
-                series=[],
-            ){
+    constructor(){
+        var params = {
+            dimension_settings: {
+                startWidth:400, // pixels
+                startHeight:100, // pixels
+                xScale:10000, // x units per display element width
+                yGrowHysteresis:2000, // milliseconds
+                yShrinkHysteresis:500, // milliseconds
+            },
 
+            control_settings: {
+                scrollRate:1000, // x units per second
+                startTime:new Date().getTime(),
+                startX:new Date().getTime(),
+                minDataBufferSize:10, // display element widths
+                graphRefreshShiftLength:3, // display element widths
+                scrollUpdateInterval:50, // milliseconds
+            },
 
-        function fillParamDefaults(param, defaultObj) {
-            if(param) {
-                for (let key in defaultObj) {
-                    if (param[key] == undefined) {
-                        param[key] == defaultObj[key];
-                    }
-                }
-            } else {
-                param = defaultObj;
+            style_settings: {
+                backgroundColor:"white",
+                canvasBackground:"", 
+                margin:"0px",
+            },
+
+            document_settings: {
+                containerId:"jog-" + new Date().getTime().toString(),  
+                resizeDetectInterval:100, // milliseconds
             }
-            return param;
+        };
+
+        for (const key in arguments[0]) {
+            if(!params[key]) { params[key] = arguments[key]; }
+            else { for(const member in arguments[0][key]) { params[key][member] = arguments[0][key][member]; } }
         }
-
-        dimension_settings = fillParamDefaults(dimension_settings, {
-            startWidth:400, 
-            startHeight:100,
-            xScale:10, 
-            yGrowHysteresis:2, 
-            yShrinkHysteresis:0.5,
-        });
-
-        control_settings = fillParamDefaults(control_settings, {
-            scrollRate:1,
-            startTime:new Date().getTime(),
-            startX:0,
-            dataBufferSize:1000,
-            scrollUpdateInterval:50,
-        });
-
-        style_settings = fillParamDefaults(style_settings, {
-            backgroundColor:"white",
-            canvasBackground:"linear-gradient(to left, blue, red)", 
-            margin:"0px",
-        });
-
-        document_settings = fillParamDefaults(document_settings, {
-            containerId:"jog-" + new Date().getTime().toString(),  
-            resizeDetectInterval:100,
-        });
-
-        
 
         // DOCUMENT
         this.containerElement = document.createElement("div");
@@ -59,44 +45,79 @@ class Jogger {
         this.intermediateElement.style.overflow = "hidden";
         this.intermediateElement.style.position = "relative";
 
-        this.containerElement.id = document_settings.containerId;
-        this.containerElement.style.width = dimension_settings.startWidth.toString() + "px";
-        this.containerElement.style.height = dimension_settings.startHeight.toString() + "px";
+        this.containerElement.id = params.document_settings.containerId;
+        this.containerElement.style.width = params.dimension_settings.startWidth.toString() + "px";
+        this.containerElement.style.height = params.dimension_settings.startHeight.toString() + "px";
         this.intermediateElement.style.width = this.containerElement.style.width;
         this.intermediateElement.style.height = this.containerElement.style.height;
 
-        this.canvasBackground = style_settings.canvasBackground;
+        this.canvasBackground = params.style_settings.canvasBackground;
 
         // SCALE
-        this.xScale = dimension_settings.xScale;
-        this.yGrowHysteresis = dimension_settings.yGrowHysteresis;
-        this.yShrinkHysteresis = dimension_settings.yShrinkHysteresis;
-        this.resizeDetectInterval = document_settings.resizeDetectInterval;
+        this.xScale = params.dimension_settings.xScale;
+        this.yGrowHysteresis = params.dimension_settings.yGrowHysteresis;
+        this.yShrinkHysteresis = params.dimension_settings.yShrinkHysteresis;
+        this.resizeDetectInterval = params.document_settings.resizeDetectInterval;
 
         // CONTROL
-        this.scrollRate = control_settings.scrollRate;
-        this.scrollUpdateInterval = control_settings.scrollUpdateInterval;
-        this.startX = control_settings.startX;
-        this.startTime = control_settings.startTime;
-        this.scrolledX = 0;
-        this.timeDelta = new Date().getTime() - control_settings.startTime;
-        this.dataBufferSize = control_settings.dataBufferSize;
-        this.mostRecentlyRenderedDatumX = 0;
+        this.scrollRate = params.control_settings.scrollRate;
+        this.graphRefreshShiftLength = params.control_settings.graphRefreshShiftLength;
+        this.scrollUpdateInterval = params.control_settings.scrollUpdateInterval;
+        this.startX = params.control_settings.startX;
+        this.frameStartX = this.startX;
+        this.drawingFrameStartX = this.frameStartX; // need separate var for drawingFrameStartX to avoid 
+                                                    // checking if frozen before drawing every point (let it be 
+                                                    // offscreen if buffer has reset)
+        this.startTime = params.control_settings.startTime;
+        this.elapsedX = 0;
+        this.scrollPosition = 0;
+        this.minDataBufferSize = params.control_settings.minDataBufferSize;
+        this.frozen = false;
 
         // STYLE
-        this.containerElement.style.backgroundColor = style_settings.backgroundColor;
-        this.containerElement.style.margin = style_settings.margin;
+        this.containerElement.style.backgroundColor = params.style_settings.backgroundColor;
+        this.containerElement.style.margin = params.style_settings.margin;
 
         // SERIES
-        this.series=series;
+        this.series=[];
 
         // ENABLE SCROLLING
         this.scrollTimer = setInterval(()=>{
-            this.scrolledX += this.scrollRate * this.scrollUpdateInterval / 1000 / this.xScale;
-            if(!document.querySelector('#'+this.series[this.series.length-1].canvasElement.id+':active')) {
-                this.scrollForwardTo(this.scrolledX);
+            let delta = this.scrollUpdateInterval / 1000 * this.scrollRate;
+            this.elapsedX += delta;
+            this.scrollPosition += delta / this.xScale;
+            if(!this.frozen) {
+                this.scrollForwardTo(this.scrollPosition);
             }
         }, this.scrollUpdateInterval);
+
+        // ENABLE RETURN TO SCROLLING AFTER FREEZING GRAPH FOR PANNING
+        document.addEventListener('mousedown', e => {
+            let isClickInside = this.containerElement.contains(e.target);
+            if (!isClickInside && this.frozen) { 
+                this.frozen = false;
+                this.drawingFrameStartX = this.frameStartX;
+                for ( let i in this.series ) {
+                    this.renderBuffer(i);
+                }
+                this.scrollForwardTo((this.elapsedX - this.frameStartX) / this.xScale);
+            }
+        });
+
+        // TRUNCATE BUFFERS PERIODICALLY
+        setTimeout( ()=>{
+            this.bufferShiftTimer = setInterval( ()=>{
+                let newFrameStartX = this.frameStartX + this.graphRefreshShiftLength * this.xScale;
+                this.startBuffersFrom( newFrameStartX );
+                this.frameStartX = newFrameStartX;
+                this.scrollPosition = this.minDataBufferSize;
+                if (!this.frozen) {
+                    this.drawingFrameStartX = this.frameStartX;
+                    for (let i in this.series) { this.renderBuffer(i); };
+                }
+            }, this.graphRefreshShiftLength * this.xScale / this.scrollRate * 1000 );
+        }, (this.minDataBufferSize) * this.xScale / this.scrollRate * 1000);
+
     }
 
     applyStyle(newStyle = {}) {}
@@ -113,13 +134,13 @@ class Jogger {
         let wNow = this.containerElement.offsetWidth;
         let hNow = this.containerElement.offsetHeight;
         let ctx = this.series[series].context;
-        let lastMove = this.series[series].lastMove; 
-        let cLastMove = [lastMove[0] * wNow, (1-lastMove[1]) * hNow];
+        let lastMove = this.series[series].lastMove;
+        let cLastMove = [lastMove[0] * wNow, (1 - lastMove[1]) * hNow];
         ctx.moveTo(cLastMove[0], cLastMove[1]);
         var cX = normX * wNow;
         var cY = (1 - normY) * hNow;
-        let midpointX = ((lastMove[0] + normX)/2)*wNow;
-        let controlPoints = [ [midpointX, lastMove[1]*hNow], [midpointX, cY] ];
+        let cMidpointX = ((lastMove[0] + normX)/2)*wNow;
+        let controlPoints = [ [cMidpointX, (1-lastMove[1])*hNow], [cMidpointX, cY] ];
         ctx.bezierCurveTo(controlPoints[0][0], controlPoints[0][1], controlPoints[1][0], controlPoints[1][1], cX , cY);
         ctx.stroke();
         this.series[series].lastMove = [normX, normY];
@@ -127,9 +148,9 @@ class Jogger {
 
     // scroll such that right edge of the viewing window is normX viewing window widths from the start.
     scrollForwardTo(normX) {
-        let newMargin = (1-normX) * this.series[0].canvasElement.offsetWidth.toString() + "px";
+        let newPosition = (1-normX) * this.containerElement.offsetWidth.toString() + "px";
         for(let i in this.series) {
-            this.series[i].canvasElement.style.left = newMargin;
+            this.series[i].canvasElement.style.left = newPosition;
         }
     }
 
@@ -138,24 +159,64 @@ class Jogger {
     scrollBackwardTo(normX) {
         let newMargin = -1 * normX * this.series[0].canvasElement.offsetWidth.toString() + "px";
         for(let i in this.series) {
-            series[i].canvasElement.style.left = newMargin;
+            this.series[i].canvasElement.style.left = newMargin;
         }
     }
 
     // TODO - this doesn't take into account yScale(s)
     pushDatum(series, x, y) {
         this.series[series].dataBuffer.push([x, y]);
-        if(x < this.mostRecentlyRenderedDatumX) {
-            this.redrawCanvas();
-        } else if (x < this.scrolledX + this.startX) {
-            this.drawLineTo(series, x - this.startX, y);
-            this.mostRecentlyRenderedDatumX = x;
+        this.drawLineTo(series, (x - this.drawingFrameStartX) / this.xScale, y);
+    }
+
+    clearCanvas(series) {
+        let context = this.series[series].context;
+        context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+        this.series[series].lastMove = [0, 0];
+        context.beginPath();
+    }
+
+    renderBuffer(series) {
+        this.clearCanvas(series);
+        this.series[series].lastMove = [0, 0];
+        let ctx = this.series[series].context;
+        let buffer = this.series[series].dataBuffer;
+
+        for( const i in buffer ) {
+            let normX = (buffer[i][0] - this.drawingFrameStartX) / this.xScale;
+            let normY = buffer[i][1];
+            let wNow = this.containerElement.offsetWidth;
+            let hNow = this.containerElement.offsetHeight;
+            let lastMove = this.series[series].lastMove;
+            let cLastMove = [lastMove[0] * wNow, (1 - lastMove[1]) * hNow];
+            ctx.moveTo(cLastMove[0], cLastMove[1]);
+            var cX = normX * wNow;
+            var cY = (1 - normY) * hNow;
+            let cMidpointX = ((lastMove[0] + normX)/2)*wNow;
+            let controlPoints = [ [cMidpointX, (1-lastMove[1])*hNow], [cMidpointX, cY] ];
+            ctx.bezierCurveTo(controlPoints[0][0], controlPoints[0][1], controlPoints[1][0], controlPoints[1][1], cX , cY);
+            this.series[series].lastMove = [normX, normY];
+        }
+        ctx.stroke();
+    }
+
+    startBuffersFrom( leftMostX ) {
+        if (this.scrollPosition > this.minDataBufferSize) {
+            for ( let seriesNumber in this.series ) {
+                let buffer = this.series[seriesNumber].dataBuffer;
+                let datumIndex = 0;
+                while ( datumIndex < buffer.length ) { 
+                    if( buffer[datumIndex][0] > leftMostX ) { break; } 
+                    else { datumIndex ++; }
+                }
+                buffer = buffer.slice(datumIndex);
+            }
         }
     }
 
     addSeries({name="",lineColor="rgb(0,0,0)",lineThickness=2,yScale=[0,1]}={}) {
         this.series.push({"name":name,"yScale":yScale, "dataBuffer": [[this.startX, 0]], 
-            "lastMove":[this.startX,0],});
+            "lastMove":[0,0],});
         let newSeries = this.series[this.series.length-1];
 
         newSeries.canvasElement = document.createElement("canvas");
@@ -166,16 +227,13 @@ class Jogger {
         newSeries.canvasElement.background = "transparent";
         newSeries.canvasElement.id="jog-canvas-" + new Date().getTime().toString();
 
-        if (this.scrolledX > 1) {
-            newSeries.canvasElement.width = this.containerElement.offsetWidth * this.scrolledX;
-        } else {
-            newSeries.canvasElement.width = this.containerElement.offsetWidth;
-        }
-
+        newSeries.canvasElement.width = this.containerElement.offsetWidth * (this.minDataBufferSize + this.graphRefreshShiftLength);
         newSeries.canvasElement.style.width = newSeries.canvasElement.width + "px";
+
         newSeries.canvasElement.height = this.containerElement.offsetHeight;
         newSeries.canvasElement.style.height = newSeries.canvasElement.height + "px";
-        newSeries.canvasElement.style.left=this.scrolledX*this.containerElement.offsetHeight+"px";
+
+        newSeries.canvasElement.style.left=this.scrollPosition*this.containerElement.offsetWidth+"px";
 
         // Enable dragging on the most recent canvas only:
 
@@ -188,6 +246,7 @@ class Jogger {
         }
 
         newSeries.canvasElement.onmousedown=e=>{
+            this.frozen = true;
             newSeries.canvasElement.style.outline="3px solid green"; 
             newSeries.canvasElement.style.outlineOffset="-3px";
         };
@@ -203,6 +262,7 @@ class Jogger {
             }
         };
 
+
         // apply background only to bottom canvas:
         if(current == 0) {
             newSeries.canvasElement.style.background = this.canvasBackground;
@@ -215,13 +275,6 @@ class Jogger {
         this.series[series].context.setLineDash([fillLength, totalLength]);
     }
 
-    refreshData(series, x, y) {
-
-    }
-
-    redrawCanvas() {
-
-    }
 
 
 } // end of class Jogger
