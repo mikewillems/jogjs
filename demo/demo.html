@@ -10,17 +10,16 @@
 
 <script type="text/javascript">
 
-    var j = new Jogger();
+    var j = new Jogger({dimension_settings:{startWidth:400,startHeight:100,xScale:5000}, control_settings:{scrollRate:1000, minDataBufferSize:5, graphRefreshShiftLength:2}, style_settings:{} });
     document.getElementById("main").appendChild(j.containerElement);
-    j.addSeries({name:"zero", lineColor:"rgb(256,256,256)", lineThickness:0.25});
+    j.addSeries({name:"zero", lineColor:"rgb(256,200,100)", lineThickness:8});
     j.addSeries();
     j.addSeries({"lineThickness":4, "lineColor":"blue"});
 
-    setInterval(()=>{j.pushDatum(0, j.scrolledX - 0.05, Math.random()); j.pushDatum(1, j.scrolledX - 0.05, Math.random()); j.pushDatum(2, j.scrolledX - 0.05, Math.random());}, 500);
+    setInterval(()=>{j.pushDatum(0, new Date().getTime(), Math.random()); j.pushDatum(1, new Date().getTime() - 0.05, Math.random()); j.pushDatum(2, new Date().getTime(), Math.random());}, 500);
     j.setSeriesLineDash(0,2,5);
 
 </script>
 
 
-</body>
 </html>

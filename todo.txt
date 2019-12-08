@@ -1,18 +1,19 @@
 JogJS todo:
-1. render primarily from the buffer not from streaming
-2. implement re-rendering
-3. implement "infinite" x-drag (freeze on mouseup, unfreeze when clicked on other element)
-4. determine penalty for moving very large canvas (if it's very different from small canvas)
-5. if penalty small, make canvas size of buffer, if penalty large, make canvas resize/re-render dynamically when dragging then reset when drag is released
-6. implement data buffer resets w/ re-rendering
-7. add limits to x-dragging according to beginning / end of data
-8. implement yScaling with single range
-9. implement yScaling with programmatically hot selectable range
-10. implement auto-scaling
-11. add momentum to scroll dragging
-12. implement x-scale programmatic change
-13. implement programmatic x-scale "zooming"
-14. data delay (allows pre-rendering)
+X 1. render primarily from the buffer not from streaming
+X 2. implement re-rendering
+X 3. implement "infinite" x-drag (freeze on mouseup, unfreeze when clicked on other element)
+
+X 4. determine penalty for moving very large canvas (if it's very different from small canvas)
+X 5. if penalty small, make canvas size of buffer, if penalty large, make canvas resize/re-render dynamically when dragging then reset when drag is released
+X 6. implement data buffer resets w/ re-rendering
+X 7. add limits to x-dragging according to beginning / end of data
+8. data delay (allows pre-rendering)
+9. implement yScaling with single range
+10. implement yScaling with programmatically hot selectable range
+11. implement auto-scaling
+12. add momentum to scroll dragging
+13. implement x-scale programmatic change
+14. implement programmatic x-scale "zooming" 
 15. interpolation options - steady or falling - for long data ingestion delays
 16. grid bg layer (programmatically calculated)
 17. time stamps

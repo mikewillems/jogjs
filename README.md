@@ -29,13 +29,13 @@ ctx
 ####dimension_settings, control_settings, style_settings, document_settings
 
 **DIMENSION**
- - xScale is a single number representing how many x units to show in the windowSize. Defaults to 10 horizontal pixels per x Unit, rounding down. If "continuous", the x scale has a minimum of 3 seconds and stretches to fit all data plus 25%, ceasing to stretch and beginning to throw away past data when data reaches 1MB in size. 
+ - xScale is a single number representing how many x units to show in the windowSize. Defaults to 10000 (for milliseconds). 
  - yGrowHysteresis is the number of most recent x frames used to determine the y scale as it grows to accomodate new out-of-range data. A value of "all" uses the entire history as a running average, and a value of "screen" uses all the data on the screen.
  - yShrinkHysteresis is the portion of the screen used to determine the y scale as it shrinks to accomodate data that is undersized for the current yScale range.
  - resizeDetectInterval gives milliseconds between checks for element resizing. Not used yet, but may be used to adjust x scaling to changing container size. For now, x scaling is static relative to the container size at time of initialization.
 
 **CONTROL**
- - scrollRate is the ratio of x units to seconds - default is 1. Only change this if not a live view (using an x unit that is not seconds).
+ - scrollRate is the ratio of x units to seconds - default is 1000 (milliseconds per second for an x unit of ms). Only change this if not a live view (using an x unit that is not seconds).
  - startX is the x value corresponding to the leftmost graphed point of the series (not necessarily a data point, just where the graph starts).
  - scrolledX is the "timekeeper" that keeps track of current scrolling position.
  - timeDelta is the difference in time from the plot initialization to the startTime of the series (in the case of non-live data) for axis labeling purposes.
