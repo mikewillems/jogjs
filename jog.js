@@ -110,9 +110,9 @@ class Jogger {
                 let newFrameStartX = this.frameStartX + this.graphRefreshShiftLength * this.xScale;
                 this.startBuffersFrom( newFrameStartX );
                 this.frameStartX = newFrameStartX;
-                this.scrollPosition = this.minDataBufferSize;
-                this.scrollForwardTo(this.scrollPosition);
                 if (!this.frozen) {
+                    this.scrollPosition = this.minDataBufferSize;
+                    this.scrollForwardTo(this.scrollPosition);
                     this.drawingFrameStartX = this.frameStartX;
                     for (let i in this.series) { this.renderBuffer(i); };
                 }
