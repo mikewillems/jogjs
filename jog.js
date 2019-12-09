@@ -111,6 +111,7 @@ class Jogger {
                 this.startBuffersFrom( newFrameStartX );
                 this.frameStartX = newFrameStartX;
                 this.scrollPosition = this.minDataBufferSize;
+                this.scrollForwardTo(this.scrollPosition);
                 if (!this.frozen) {
                     this.drawingFrameStartX = this.frameStartX;
                     for (let i in this.series) { this.renderBuffer(i); };
@@ -154,15 +155,6 @@ class Jogger {
         }
     }
 
-
-    // scroll such that left edge of the viewing window is normX viewing window widths from the start.
-    scrollBackwardTo(normX) {
-        let newMargin = -1 * normX * this.series[0].canvasElement.offsetWidth.toString() + "px";
-        for(let i in this.series) {
-            this.series[i].canvasElement.style.left = newMargin;
-        }
-    }
-
     // TODO - this doesn't take into account yScale(s)
     pushDatum(series, x, y) {
         this.series[series].dataBuffer.push([x, y]);
@@ -182,21 +174,22 @@ class Jogger {
         let ctx = this.series[series].context;
         let buffer = this.series[series].dataBuffer;
 
+        let wNow = this.containerElement.offsetWidth;
+        let hNow = this.containerElement.offsetHeight;
+        let cLastMove = [this.series[series].lastMove[0] * wNow, (1 - this.series[series].lastMove[1]) * hNow];
+        let normX, normY;
         for( const i in buffer ) {
-            let normX = (buffer[i][0] - this.drawingFrameStartX) / this.xScale;
-            let normY = buffer[i][1];
-            let wNow = this.containerElement.offsetWidth;
-            let hNow = this.containerElement.offsetHeight;
-            let lastMove = this.series[series].lastMove;
-            let cLastMove = [lastMove[0] * wNow, (1 - lastMove[1]) * hNow];
+            normX = (buffer[i][0] - this.drawingFrameStartX) / this.xScale;
+            normY = buffer[i][1];
             ctx.moveTo(cLastMove[0], cLastMove[1]);
             var cX = normX * wNow;
             var cY = (1 - normY) * hNow;
-            let cMidpointX = ((lastMove[0] + normX)/2)*wNow;
-            let controlPoints = [ [cMidpointX, (1-lastMove[1])*hNow], [cMidpointX, cY] ];
+            let cMidpointX = (cLastMove[0] + cX)/2;
+            let controlPoints = [ [cMidpointX, cLastMove[1]], [cMidpointX, cY] ];
             ctx.bezierCurveTo(controlPoints[0][0], controlPoints[0][1], controlPoints[1][0], controlPoints[1][1], cX , cY);
-            this.series[series].lastMove = [normX, normY];
+            cLastMove = [cX,cY];
         }
+        this.series[series].lastMove = [normX, normY];
         ctx.stroke();
     }
 
