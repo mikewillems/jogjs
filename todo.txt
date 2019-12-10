@@ -6,28 +6,33 @@ X 3. implement "infinite" x-drag (freeze on mouseup, unfreeze when clicked on ot
 X 4. determine penalty for moving very large canvas (if it's very different from small canvas)
 X 5. if penalty small, make canvas size of buffer, if penalty large, make canvas resize/re-render dynamically when dragging then reset when drag is released
 X 6. implement data buffer resets w/ re-rendering
-X 7. add limits to x-dragging according to beginning / end of data
-8. data delay (allows pre-rendering)
-9. implement yScaling with single range
-10. implement yScaling with programmatically hot selectable range
-11. implement auto-scaling
-12. add momentum to scroll dragging
-13. implement x-scale programmatic change
-14. implement programmatic x-scale "zooming" 
-15. interpolation options - steady or falling - for long data ingestion delays
-16. grid bg layer (programmatically calculated)
-17. time stamps
-18. bg style differentiation for missing data
-19. graph dashing for missing data
-20. foreground / overlay shading for missing data
-21. axis labels
-22. axis gradations
-23. automatic series color changes by y value range
-24. programmatic bg color change 
-25. automatic background color changes by callback (e.g. using y value ranges)
-26. vertical bar marker addition
-27. vertical marker styling
-28. ornamental markers below plot
-29. ornamental markers on graph
+7. fix re-render timing glitches
+8. identify and avoid closures in timeout functions (e.g. by using only counts and then passing the necessary objects each time) to avoid infinite stack depth
+9. add limits to x-dragging according to beginning / end of data
+10. make data buffer and scroll optional (i.e. lightweight version without it)
+11. data delay (allows pre-rendering)
+12. improve performance with requestAnimationFrame API (https://www.html5rocks.com/en/tutorials/canvas/performance/)
+13. consider single canvas for each of the series (but continuing to keep track of last move on a per-series basis) and simply using moveTo to along with changing settings to go between them - very unlikely to be faster, but maybe
+14. implement yScaling with single range
+15. implement yScaling with programmatically hot selectable range
+16. implement auto-scaling
+17. add momentum to scroll dragging
+18. implement x-scale programmatic change
+19. implement programmatic x-scale "zooming" 
+20. interpolation options - steady or falling - for long data ingestion delays
+21. grid bg layer (programmatically calculated)
+22. time stamps
+23. bg style differentiation for missing data
+24. graph dashing for missing data
+25. foreground / overlay shading for missing data
+26. axis labels
+27. axis gradations
+28. automatic series color changes by y value range
+29. programmatic bg color change 
+30. automatic background color changes by callback (e.g. using y value ranges)
+31. vertical bar marker addition
+32. vertical marker styling
+33. ornamental markers below plot
+34. ornamental markers on graph
 
 total = ~20h
