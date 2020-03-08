@@ -4,6 +4,8 @@ class Jogger {
         var params = {
             mode_settings: {
                 lightweightMode:false,
+                dynamicScaling:false,
+                stackedGraphs:false,
             },
 
             dimension_settings: {
@@ -12,6 +14,7 @@ class Jogger {
                 xScale:10000, // x units per display element width
                 yGrowHysteresis:2000, // milliseconds
                 yShrinkHysteresis:500, // milliseconds
+                yScaleUpdateInterval:2000,
             },
 
             control_settings: {
@@ -41,6 +44,9 @@ class Jogger {
             else { for(const member in arguments[0][key]) { params[key][member] = arguments[0][key][member]; } }
         }
 
+        // MODE
+        this.dynamicScaling = params.mode_settings.dynamicScaling;
+
         // DOCUMENT
         this.containerElement = document.createElement("div");
         this.intermediateElement = document.createElement("div");
@@ -68,6 +74,7 @@ class Jogger {
         this.scrollRate = params.control_settings.scrollRate;
         this.graphRefreshShiftLength = params.control_settings.graphRefreshShiftLength;
         this.scrollUpdateInterval = params.control_settings.scrollUpdateInterval;
+        this.yScaleUpdateInterval = params.dimension_settings.yScaleUpdateInterval;
         this.startX = params.control_settings.startX;
         this.frameStartX = this.startX;
         this.drawingFrameStartX = this.frameStartX; // need separate var for drawingFrameStartX to avoid 
@@ -78,6 +85,7 @@ class Jogger {
         this.scrollPosition = 0;
         this.scrollDeltaX = this.scrollUpdateInterval / 1000 * this.scrollRate; 
         this.scrollDeltaPos = this.scrollDeltaX / this.xScale;
+        this.scaleMinX
         this.minDataBufferSize = params.control_settings.minDataBufferSize;
         this.frozen = false;
         this.panningEnabled = params.control_settings.panningEnabled;
@@ -97,6 +105,13 @@ class Jogger {
                 this.scrollForwardTo(this.scrollPosition);
             }
         }, this.scrollUpdateInterval);
+
+        // ENABLE DYNAMIC Y SCALING
+        if( this.dynamicScaling ) {
+            this.yScaleTimer = setInterval(()=>{j
+                console.log("scaling: ", this.yScaleUpdateInterval); // this.scaleGraph();
+            }, this.yScaleUpdateInterval);
+        }
 
         // ENABLE RETURN TO SCROLLING AFTER FREEZING GRAPH FOR PANNING (NO EFFECT WHEN DISABLED)
         document.addEventListener('mousedown', e => {
@@ -140,7 +155,10 @@ class Jogger {
 
     drawLineTo(series, normX, normY) {
         let wNow = this.containerElement.offsetWidth;
-        let hNow = this.containerElement.offsetHeight;
+        let hNow = this.series[series].canvasElement.offsetHeight; // important to separate container and series height 
+                                                                   // to allow for vertically tiled graphs
+        let rangeArray = this.series[series].yScale;
+        normY = (rangeArray[1] - rangeArray[0]) * normY;
         let ctx = this.series[series].context;
         let lastMove = this.series[series].lastMove;
         let cLastMove = [lastMove[0] * wNow, (1 - lastMove[1]) * hNow];
@@ -182,12 +200,14 @@ class Jogger {
         let buffer = this.series[series].dataBuffer;
 
         let wNow = this.containerElement.offsetWidth;
-        let hNow = this.containerElement.offsetHeight;
+        let hNow = this.series[series].canvasElement.offsetHeight;
         let cLastMove = [this.series[series].lastMove[0] * wNow, (1 - this.series[series].lastMove[1]) * hNow];
         let normX, normY;
+        let rangeArray = this.series[series].yScale;
+        normY = rangeArray[1];
         for( const i in buffer ) {
             normX = (buffer[i][0] - this.drawingFrameStartX) / this.xScale;
-            normY = buffer[i][1];
+            normY = (rangeArray[1]-rangeArray[0]) * buffer[i][1];
             ctx.moveTo(cLastMove[0], cLastMove[1]);
             var cX = normX * wNow;
             var cY = (1 - normY) * hNow;
@@ -272,7 +292,6 @@ class Jogger {
 
         if(isEnabled) {
             lastSeries.canvasElement.onmousemove=e=>{
-                console.log('moving');
                 if ( document.querySelector('#'+lastSeries.canvasElement.id+':active') ) {
                     let left = (parseInt(lastSeries.canvasElement.style.left.split('px')[0]) + e.movementX) + "px";
                     for(let i in this.series) {
