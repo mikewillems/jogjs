@@ -10,7 +10,7 @@
 
 <script type="text/javascript">
 
-    var j = new Jogger({dimension_settings:{startWidth:400,startHeight:100,xScale:5000}, control_settings:{scrollRate:1000, minDataBufferSize:5, graphRefreshShiftLength:2}, style_settings:{} });
+    var j = new Jogger({dimension_settings:{startWidth:400,startHeight:100,xScale:10000}, control_settings:{scrollRate:1000, minDataBufferSize:2, graphRefreshShiftLength:2, panningEnabled:true}, style_settings:{} });
     document.getElementById("main").appendChild(j.containerElement);
     j.addSeries({name:"zero", lineColor:"rgb(256,200,100)", lineThickness:8});
     j.addSeries();

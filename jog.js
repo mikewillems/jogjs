@@ -2,6 +2,10 @@ class Jogger {
 
     constructor(){
         var params = {
+            mode_settings: {
+                lightweightMode:false,
+            },
+
             dimension_settings: {
                 startWidth:400, // pixels
                 startHeight:100, // pixels
@@ -17,6 +21,7 @@ class Jogger {
                 minDataBufferSize:10, // display element widths
                 graphRefreshShiftLength:3, // display element widths
                 scrollUpdateInterval:50, // milliseconds
+                panningEnabled:false,
             },
 
             style_settings: {
@@ -71,8 +76,11 @@ class Jogger {
         this.startTime = params.control_settings.startTime;
         this.elapsedX = 0;
         this.scrollPosition = 0;
+        this.scrollDeltaX = this.scrollUpdateInterval / 1000 * this.scrollRate; 
+        this.scrollDeltaPos = this.scrollDeltaX / this.xScale;
         this.minDataBufferSize = params.control_settings.minDataBufferSize;
         this.frozen = false;
+        this.panningEnabled = params.control_settings.panningEnabled;
 
         // STYLE
         this.containerElement.style.backgroundColor = params.style_settings.backgroundColor;
@@ -83,15 +91,14 @@ class Jogger {
 
         // ENABLE SCROLLING
         this.scrollTimer = setInterval(()=>{
-            let delta = this.scrollUpdateInterval / 1000 * this.scrollRate;
-            this.elapsedX += delta;
-            this.scrollPosition += delta / this.xScale;
+            this.elapsedX += this.scrollDeltaX;
+            this.scrollPosition += this.scrollDeltaPos;
             if(!this.frozen) {
                 this.scrollForwardTo(this.scrollPosition);
             }
         }, this.scrollUpdateInterval);
 
-        // ENABLE RETURN TO SCROLLING AFTER FREEZING GRAPH FOR PANNING
+        // ENABLE RETURN TO SCROLLING AFTER FREEZING GRAPH FOR PANNING (NO EFFECT WHEN DISABLED)
         document.addEventListener('mousedown', e => {
             let isClickInside = this.containerElement.contains(e.target);
             if (!isClickInside && this.frozen) { 
@@ -202,12 +209,18 @@ class Jogger {
                     if( buffer[datumIndex][0] > leftMostX ) { break; } 
                     else { datumIndex ++; }
                 }
-                buffer = buffer.slice(datumIndex);
+                this.series[seriesNumber].dataBuffer = buffer.slice(datumIndex);
             }
         }
     }
 
     addSeries({name="",lineColor="rgb(0,0,0)",lineThickness=2,yScale=[0,1]}={}) {
+        if(this.series.length > 0) {
+            let lastSeries = this.series[this.series.length-1];
+            lastSeries.canvasElement.onmousedown = null;
+            lastSeries.canvasElement.onmouseup = null;
+            lastSeries.canvasElement.onmousemove = null;
+        }
         this.series.push({"name":name,"yScale":yScale, "dataBuffer": [[this.startX, 0]], 
             "lastMove":[0,0],});
         let newSeries = this.series[this.series.length-1];
@@ -232,33 +245,14 @@ class Jogger {
 
         let current = this.series.length-1;
 
-        for (let i = 0; i < current; i++) {
-            this.series[i].canvasElement.onmousedown = null;
-            this.series[i].canvasElement.onmouseup = null;
-            this.series[i].canvasElement.onmousemove = null;
-        }
-
-        newSeries.canvasElement.onmousedown=e=>{
-            this.frozen = true;
-            newSeries.canvasElement.style.outline="3px solid green"; 
-            newSeries.canvasElement.style.outlineOffset="-3px";
-        };
-        
-        newSeries.canvasElement.onmouseup=e=>{newSeries.canvasElement.style.outline="none";};
-
-        newSeries.canvasElement.onmousemove=e=>{
-            if ( document.querySelector('#'+newSeries.canvasElement.id+':active') ) {
-                let left = (parseInt(newSeries.canvasElement.style.left.split('px')[0]) + e.movementX) + "px";
-                for(let i in this.series) {
-                    this.series[i].canvasElement.style.left = left;
-                }
-            }
-        };
-
-
         // apply background only to bottom canvas:
         if(current == 0) {
             newSeries.canvasElement.style.background = this.canvasBackground;
+        }
+
+        // enables panning (automatically applies to only top canvas element)
+        if( this.panningEnabled ) {
+            this.enablePanning(true);
         }
 
         return newSeries; // returns the new series object
@@ -268,6 +262,37 @@ class Jogger {
         this.series[series].context.setLineDash([fillLength, totalLength]);
     }
 
+    enablePanning(isEnabled) {
+        this.panningEnabled = isEnabled;
+
+        if (this.series.length == 0) {return;}
+
+        let current = this.series.length-1;
+        let lastSeries = this.series[current];
+
+        if(isEnabled) {
+            lastSeries.canvasElement.onmousemove=e=>{
+                console.log('moving');
+                if ( document.querySelector('#'+lastSeries.canvasElement.id+':active') ) {
+                    let left = (parseInt(lastSeries.canvasElement.style.left.split('px')[0]) + e.movementX) + "px";
+                    for(let i in this.series) {
+                        this.series[i].canvasElement.style.left = left;
+                    }
+                }
+            };
+            lastSeries.canvasElement.onmousedown=e=>{
+                this.frozen = true;
+                lastSeries.canvasElement.style.outline="3px solid green"; 
+                lastSeries.canvasElement.style.outlineOffset="-3px";
+            };
+            lastSeries.canvasElement.onmouseup=e=>{lastSeries.canvasElement.style.outline="none";};
+        } else {
+            lastSeries.canvasElement.onmousedown = null;
+            lastSeries.canvasElement.onmouseup = null;
+            lastSeries.canvasElement.onmousemove = null;
+        }
+
+    }
 
 
 } // end of class Jogger
