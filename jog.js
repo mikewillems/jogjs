@@ -16,6 +16,8 @@ class Jogger {
 
             control_settings: {
                 scrollRate:1000, // x units per second
+                delay:0, // milliseconds - If 0, graph jumps to new data point each time.
+                         // If > 0, right edge of graph is this far behind incoming data. 
                 startTime:new Date().getTime(),
                 startX:new Date().getTime(),
                 minDataBufferSize:10, // display element widths
@@ -66,9 +68,10 @@ class Jogger {
 
         // CONTROL
         this.scrollRate = params.control_settings.scrollRate;
+        this.delay = params.control_settings.delay;
         this.graphRefreshShiftLength = params.control_settings.graphRefreshShiftLength;
         this.scrollUpdateInterval = params.control_settings.scrollUpdateInterval;
-        this.startX = params.control_settings.startX;
+        this.startX = params.control_settings.startX - this.delay;
         this.frameStartX = this.startX;
         this.drawingFrameStartX = this.frameStartX; // need separate var for drawingFrameStartX to avoid 
                                                     // checking if frozen before drawing every point (let it be 
